@@ -1,0 +1,216 @@
+---
+title: "Tidy your data"
+author: "Colby S-P"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(readr)
+library(ggplot2)
+```
+
+
+# Question 1
+## Part A
+```{r}
+# get url for the data
+url_part_A <- "https://www2.isye.gatech.edu/~jeffwu/wuhamadabook/data/ThicknessGauge.dat"
+
+# define new column names for if you look at the raw table
+column_names <- c("Part", "Op1M1", "Op1M2", "Op2M1", "Op2M2", "Op3M1", "Op3M2")
+
+# read the data, skip first two lines to get straight to the data
+data_A <-read.table(url_part_A, col.names=column_names, skip=2)
+
+# display the raw table
+print(data_A)
+
+# get the average part measurment per operator
+Op1_avg <- rowMeans(data_A[, 2:3])
+Op2_avg <- rowMeans(data_A[, 4:5])
+Op3_avg <- rowMeans(data_A[, 6:7])
+
+# create a dataframe out of the average data
+df <- data.frame(x = data_A$Part,
+                   y1 = Op1_avg,
+                   y2 = Op2_avg,
+                   y3 = Op3_avg)
+ 
+# reshape the dataframe for plotting
+df_reshaped <- data.frame(x = df$x,                            
+                       y = c(df$y1, df$y2, df$y3),
+                       Operator = c(rep("1", nrow(df)),
+                                 rep("2", nrow(df)),
+                                 rep("3", nrow(df))))
+ 
+# plot the data using ggplot
+ggplot(df_reshaped, aes(x, y, col = Operator)) +
+  geom_point() +
+  labs(x = "Part Number", y = "Average Operator Measurement", title = "Average Part Measurement vs. Part per Operator")
+```
+
+## Part B
+```{r}
+# get url for the data
+url_part_B <- "https://www2.isye.gatech.edu/~jeffwu/wuhamadabook/data/BrainandBodyWeight.dat"
+
+# load in the data skipping first line and separating on spaces
+data_B <- read.table(url_part_B, header = FALSE, skip=1, sep = " ", fill = TRUE, na.strings = "")
+
+# make a new vectors combining each of the redundant columns
+reshaped_B <- data.frame(
+  "BrainWeight" = c(data_B$V1, data_B$V3, data_B$V5),
+  "BodyWeight" = c(data_B$V2, data_B$V4, data_B$V6)
+)
+
+# drop na values from the resultant dataframe
+reshaped_B <- na.omit(reshaped_B)
+
+# display the raw dataframe
+print(reshaped_B)
+
+# rewrite the table as a dataframe for ggplot
+data_B <- data.frame(x = reshaped_B$BodyWeight,
+                   y = reshaped_B$BrainWeight)
+
+# display the data with x and the body weight and y as the brain weight
+ggplot(data_B, aes(x=x, y=y)) + 
+  geom_point()+
+  geom_smooth(method=lm) + # add a linear regression line for fun
+  labs(x = "Body Weight (unit)", y = "Brain Weight (unit)", title = "Comparison Of Brain Weight to Body Weight")
+```
+
+## Part C
+```{r}
+library(data.table)
+library(tidyr)
+```
+
+```{r}
+# get url for the data
+url_part_C <- "https://www2.isye.gatech.edu/~jeffwu/wuhamadabook/data/LongJumpData.dat"
+
+# read in the data using fread this time
+# there is no hearder in this file and we need to skip the first line for its broken column labels
+data_C <- fread(url_part_C, header=FALSE, skip=1, fill=TRUE)
+
+# reshape the data combining the redundant columns
+reshaped_C <- data.frame(
+  "Year" = c(data_C$V1, data_C$V3, data_C$V5, data_C$V7),
+  "Long Jump" = c(data_C$V2, data_C$V4, data_C$V6, data_C$V8)
+)
+
+# drop na values from the resultant dataframe
+reshaped_C <- na.omit(reshaped_C)
+
+# add 1900 to the year so it is more readable
+reshaped_C$Year <- reshaped_C$Year + 1900
+
+# display the raw table
+print(reshaped_C)
+
+# rewrite the table as a dataframe for ggplot
+data_C <- data.frame(x = reshaped_C$Year,
+                   y = reshaped_C$Long.Jump)
+
+# display the data with x and the body weight and y as the brain weight
+ggplot(data_C, aes(x=x, y=y)) + 
+  geom_point()+
+  geom_smooth(method=lm) + # add a linear regression line for fun
+  labs(x = "Year", y = "Winning Long Jump Distance (unit)", title = "Winning Long Jump Distances Over Time")
+```
+
+## Part D
+```{r}
+# get url for the data
+url_part_D <- "https://www2.isye.gatech.edu/~jeffwu/wuhamadabook/data/tomato.dat"
+
+# read in the data using fread
+# again, there is a header but it isn't very helpful, instead we will skip the first two rows to get straight to the data
+# we are also going to separate based on spaces since later we can break based on the commas in the nested data
+data_D <- fread(url_part_D, header=FALSE, skip=2, fill=TRUE, sep=" ")
+
+# separate each of the read columns into three new ones corresponding to their group (10k, 20k, 30k)
+df <- data_D %>%
+  separate(col = "V2", into = c("M1_10,000", "M2_10,000", "M3_10,000"), sep = ",") %>%
+  separate(col = "V3", into = c("M1_20,000", "M2_20,000", "M3_20,000"), sep = ",") %>%
+  separate(col = "V4", into = c("M1_30,000", "M2_30,000", "M3_30,000"), sep = ",")
+
+# convert all applicable columns to numeric
+df[, 1:10] <- lapply(df[, 1:10], as.numeric)
+
+# display the raw table
+print(df)
+
+# get the average part measurment per operator
+tenk_avg <- rowMeans(df[, 2:4])
+twentyk_avg <- rowMeans(df[, 5:7])
+thirtyk_avg <- rowMeans(df[, 8:10])
+
+# create a dataframe out of the average data
+df <- data.frame(x = c("Ife #1", "Pusa Early Dwarf"),
+                   y1 = tenk_avg,
+                   y2 = twentyk_avg,
+                   y3 = thirtyk_avg)
+ 
+# reshape the dataframe for plotting
+df_reshaped <- data.frame(x = df$x,                            
+                       y = c(df$y1, df$y2, df$y3),
+                       Density = c(rep("10,000", nrow(df)),
+                                 rep("20,000", nrow(df)),
+                                 rep("30,000", nrow(df))))
+ 
+# plot the data using ggplot
+ggplot(df_reshaped, aes(x, y, col = Density)) +
+  geom_point() +
+  labs(x = "Variety", y = "Average Plant Yield", title = "Plant Yield vs. Variety per Planting Density")
+```
+
+## Part E
+```{r}
+url_part_E <- "https://www2.isye.gatech.edu/~jeffwu/wuhamadabook/data/LarvaeControl.dat"
+data_E <- fread(url_part_E, header=TRUE, skip=2, fill=TRUE)
+
+# run a quick loop to change the names of the columns beyond the block
+for (i in c(2:11)) {
+  
+  # if part of the first 5 then its treatment 1
+  if (i < 7) {
+    # change the name to age 1 followed by treatment number
+    colnames(data_E)[i] <- paste("Age1_Treat", i-1, sep="")
+  }
+  # if part of the next 5 then its treatment 1
+  else {
+    # change the name to age 2 followed by treatment number
+    colnames(data_E)[i] <- paste("Age2_Treat", i-6, sep="")
+  }
+}
+
+# display the raw dataframe
+print(data_E)
+
+# get the average part measurement per operator
+averages <- colMeans(data_E)
+
+# create a dataframe out of the average data
+df <- data.frame(x = c(1:5),
+                   y1 = averages[2:6],
+                   y2 = averages[7:11])
+
+# reshape the dataframe for plotting
+df_reshaped <- data.frame(x = df$x,                            
+                       y = c(df$y1, df$y2),
+                       AgeGroup = c(rep("1", nrow(df)),
+                                 rep("2", nrow(df))))
+ 
+# plot the data using ggplot
+ggplot(df_reshaped, aes(x, y, col = AgeGroup)) +
+  geom_point() +
+  labs(x = "Treatment Type", y = "Larvae Count", title = "Larvae Count vs. Treatment Type per Age Group")
+```

@@ -174,7 +174,12 @@ ggplot(df_reshaped, aes(x, y, col = Density)) +
 
 ## Part E
 ```{r}
+# get url for the data
 url_part_E <- "https://www2.isye.gatech.edu/~jeffwu/wuhamadabook/data/LarvaeControl.dat"
+
+# load the data using fread once again
+# this one is pretty nice as if we skip the first two rows the header is in the right position
+# then we read that header accordingly and just have to change some column names to distinguish them
 data_E <- fread(url_part_E, header=TRUE, skip=2, fill=TRUE)
 
 # run a quick loop to change the names of the columns beyond the block
